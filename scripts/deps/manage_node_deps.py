@@ -15,6 +15,7 @@ import json
 import subprocess
 import sys
 from collections import OrderedDict
+import shlex
 
 scripts_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(scripts_path)
@@ -55,6 +56,7 @@ def load_json_file(location):
     return json.load(location, object_pairs_hook=OrderedDict)
 
 def exec_command(cmd):
+    print(f"exec_command: {shlex.join(cmd)}")
     try:
         new_env = os.environ.copy()
         # Prevent large files from being checked in to git.
@@ -191,6 +193,7 @@ def run_npm_command(npm_command_args=None):
 
     run_custom_command = npm_command_args is not None
 
+    print("install_missing_deps")
     if install_missing_deps():
         return True
 
@@ -202,9 +205,13 @@ def run_npm_command(npm_command_args=None):
         ] or npm_command_args[:1] == ['audit'
                                       ] or npm_command_args[:1] == ['ls']
 
+    exec_command(['npm', '--version'])
+    exec_command([devtools_paths.node_path(), '--version'])
+
     # By default, run the CI version of npm, which prevents updates to the versions of modules.
     # However, when we are analyzing the installed NPM dependencies, we don't need to run
     # the installation process again.
+    # PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --omit optional --ignore-scripts
     if not runs_analysis_command:
         if exec_command([
                 'npm',
@@ -224,6 +231,8 @@ def run_npm_command(npm_command_args=None):
     if run_custom_command:
         custom_command_result = exec_command(['npm'] + npm_command_args)
 
+    # no longer necessary since npmv7
+    # keep to reduce diff noise
     if strip_private_fields():
         return True
 
@@ -239,7 +248,13 @@ def run_npm_command(npm_command_args=None):
     if run_custom_command:
         return custom_command_result
 
-    return ensure_licenses()
+    licenses_ok = ensure_licenses()
+
+    print("done installing node deps. compare:")
+    print("  git -c core.safecrlf=false diff")
+    # disable warnings: CRLF will be replaced by LF
+
+    return licenses_ok
 
 
 def main(argv):
