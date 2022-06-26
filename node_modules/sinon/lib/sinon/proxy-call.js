@@ -14,6 +14,11 @@ var map = arrayProto.map;
 var reduce = arrayProto.reduce;
 var slice = arrayProto.slice;
 
+/**
+ * @param proxy
+ * @param text
+ * @param args
+ */
 function throwYieldError(proxy, text, args) {
     var msg = functionName(proxy) + text;
     if (args.length) {
@@ -220,7 +225,8 @@ var callProto = {
             }
         }
         if (this.stack) {
-            // Omit the error message and the two top stack frames in sinon itself:
+            // If we have a stack, add the first frame that's in end-user code
+            // Skip the first two frames because they will refer to Sinon code
             callStr += (this.stack.split("\n")[3] || "unknown").replace(
                 /^\s*(?:at\s+|@)?/,
                 " at "
@@ -249,6 +255,15 @@ Object.defineProperty(callProto, "stack", {
 
 callProto.invokeCallback = callProto.yield;
 
+/**
+ * @param proxy
+ * @param thisValue
+ * @param args
+ * @param returnValue
+ * @param exception
+ * @param id
+ * @param errorWithCallStack
+ */
 function createProxyCall(
     proxy,
     thisValue,

@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/// <reference types="node" />
-import { PuppeteerLifeCycleEvent } from './LifecycleWatcher.js';
-import { JSHandle, ElementHandle } from './JSHandle.js';
-import { ExecutionContext } from './ExecutionContext.js';
-import { TimeoutSettings } from './TimeoutSettings.js';
-import { MouseButton } from './Input.js';
-import { FrameManager, Frame } from './FrameManager.js';
-import { SerializableOrJSHandle, EvaluateHandleFn, WrapElementHandle, EvaluateFn, EvaluateFnReturnType, UnwrapPromiseLike } from './EvalTypes.js';
 import { CDPSession } from './Connection.js';
+import { ElementHandle } from './ElementHandle.js';
+import { ExecutionContext } from './ExecutionContext.js';
+import { Frame, FrameManager } from './FrameManager.js';
+import { MouseButton } from './Input.js';
+import { JSHandle } from './JSHandle.js';
+import { PuppeteerLifeCycleEvent } from './LifecycleWatcher.js';
+import { TimeoutSettings } from './TimeoutSettings.js';
+import { EvaluateFunc, HandleFor } from './types.js';
 /**
  * @public
  */
@@ -42,39 +42,57 @@ export interface PageBinding {
  * @internal
  */
 export declare class DOMWorld {
-    private _frameManager;
-    private _client;
-    private _frame;
-    private _timeoutSettings;
-    private _documentPromise?;
-    private _contextPromise?;
-    private _contextResolveCallback?;
-    private _detached;
+    #private;
     /**
      * @internal
      */
-    _waitTasks: Set<WaitTask>;
+    get _waitTasks(): Set<WaitTask>;
     /**
      * @internal
-     * Contains mapping from functions that should be bound to Puppeteer functions.
      */
-    _boundFunctions: Map<string, Function>;
-    private _ctxBindings;
-    private static bindingIdentifier;
+    get _boundFunctions(): Map<string, Function>;
     constructor(client: CDPSession, frameManager: FrameManager, frame: Frame, timeoutSettings: TimeoutSettings);
     frame(): Frame;
-    _setContext(context?: ExecutionContext): Promise<void>;
+    /**
+     * @internal
+     */
+    _setContext(context: ExecutionContext | null): Promise<void>;
+    /**
+     * @internal
+     */
     _hasContext(): boolean;
+    /**
+     * @internal
+     */
     _detach(): void;
     executionContext(): Promise<ExecutionContext>;
-    evaluateHandle<HandlerType extends JSHandle = JSHandle>(pageFunction: EvaluateHandleFn, ...args: SerializableOrJSHandle[]): Promise<HandlerType>;
-    evaluate<T extends EvaluateFn>(pageFunction: T, ...args: SerializableOrJSHandle[]): Promise<UnwrapPromiseLike<EvaluateFnReturnType<T>>>;
-    $<T extends Element = Element>(selector: string): Promise<ElementHandle<T> | null>;
+    evaluateHandle<Params extends unknown[], Func extends EvaluateFunc<Params> = EvaluateFunc<Params>>(pageFunction: Func | string, ...args: Params): Promise<HandleFor<Awaited<ReturnType<Func>>>>;
+    evaluate<Params extends unknown[], Func extends EvaluateFunc<Params> = EvaluateFunc<Params>>(pageFunction: Func | string, ...args: Params): Promise<Awaited<ReturnType<Func>>>;
+    $<Selector extends keyof HTMLElementTagNameMap>(selector: Selector): Promise<ElementHandle<HTMLElementTagNameMap[Selector]> | null>;
+    $(selector: string): Promise<ElementHandle | null>;
+    $$<Selector extends keyof HTMLElementTagNameMap>(selector: Selector): Promise<ElementHandle<HTMLElementTagNameMap[Selector]>[]>;
+    $$(selector: string): Promise<ElementHandle[]>;
+    /**
+     * @internal
+     */
     _document(): Promise<ElementHandle>;
     $x(expression: string): Promise<ElementHandle[]>;
-    $eval<ReturnType>(selector: string, pageFunction: (element: Element, ...args: unknown[]) => ReturnType | Promise<ReturnType>, ...args: SerializableOrJSHandle[]): Promise<WrapElementHandle<ReturnType>>;
-    $$eval<ReturnType>(selector: string, pageFunction: (elements: Element[], ...args: unknown[]) => ReturnType | Promise<ReturnType>, ...args: SerializableOrJSHandle[]): Promise<WrapElementHandle<ReturnType>>;
-    $$<T extends Element = Element>(selector: string): Promise<Array<ElementHandle<T>>>;
+    $eval<Selector extends keyof HTMLElementTagNameMap, Params extends unknown[], Func extends EvaluateFunc<[
+        HTMLElementTagNameMap[Selector],
+        ...Params
+    ]> = EvaluateFunc<[HTMLElementTagNameMap[Selector], ...Params]>>(selector: Selector, pageFunction: Func | string, ...args: Params): Promise<Awaited<ReturnType<Func>>>;
+    $eval<Params extends unknown[], Func extends EvaluateFunc<[Element, ...Params]> = EvaluateFunc<[
+        Element,
+        ...Params
+    ]>>(selector: string, pageFunction: Func | string, ...args: Params): Promise<Awaited<ReturnType<Func>>>;
+    $$eval<Selector extends keyof HTMLElementTagNameMap, Params extends unknown[], Func extends EvaluateFunc<[
+        HTMLElementTagNameMap[Selector][],
+        ...Params
+    ]> = EvaluateFunc<[HTMLElementTagNameMap[Selector][], ...Params]>>(selector: Selector, pageFunction: Func | string, ...args: Params): Promise<Awaited<ReturnType<Func>>>;
+    $$eval<Params extends unknown[], Func extends EvaluateFunc<[Element[], ...Params]> = EvaluateFunc<[
+        Element[],
+        ...Params
+    ]>>(selector: string, pageFunction: Func | string, ...args: Params): Promise<Awaited<ReturnType<Func>>>;
     content(): Promise<string>;
     setContent(html: string, options?: {
         timeout?: number;
@@ -123,22 +141,21 @@ export declare class DOMWorld {
     type(selector: string, text: string, options?: {
         delay: number;
     }): Promise<void>;
+    waitForSelector<Selector extends keyof HTMLElementTagNameMap>(selector: Selector, options: WaitForSelectorOptions): Promise<ElementHandle<HTMLElementTagNameMap[Selector]> | null>;
     waitForSelector(selector: string, options: WaitForSelectorOptions): Promise<ElementHandle | null>;
-    private _settingUpBinding;
     /**
      * @internal
      */
-    addBindingToContext(context: ExecutionContext, name: string): Promise<void>;
-    private _onBindingCalled;
+    _addBindingToContext(context: ExecutionContext, name: string): Promise<void>;
     /**
      * @internal
      */
-    waitForSelectorInPage(queryOne: Function, selector: string, options: WaitForSelectorOptions, binding?: PageBinding): Promise<ElementHandle | null>;
+    _waitForSelectorInPage(queryOne: Function, selector: string, options: WaitForSelectorOptions, binding?: PageBinding): Promise<ElementHandle | null>;
     waitForXPath(xpath: string, options: WaitForSelectorOptions): Promise<ElementHandle | null>;
     waitForFunction(pageFunction: Function | string, options?: {
         polling?: string | number;
         timeout?: number;
-    }, ...args: SerializableOrJSHandle[]): Promise<JSHandle>;
+    }, ...args: unknown[]): Promise<JSHandle>;
     title(): Promise<string>;
 }
 /**
@@ -152,30 +169,17 @@ export interface WaitTaskOptions {
     polling: string | number;
     timeout: number;
     binding?: PageBinding;
-    args: SerializableOrJSHandle[];
+    args: unknown[];
     root?: ElementHandle;
 }
 /**
  * @internal
  */
 export declare class WaitTask {
-    _domWorld: DOMWorld;
-    _polling: string | number;
-    _timeout: number;
-    _predicateBody: string;
-    _predicateAcceptsContextElement: boolean;
-    _args: SerializableOrJSHandle[];
-    _binding: PageBinding;
-    _runCount: number;
+    #private;
     promise: Promise<JSHandle>;
-    _resolve: (x: JSHandle) => void;
-    _reject: (x: Error) => void;
-    _timeoutTimer?: NodeJS.Timeout;
-    _terminated: boolean;
-    _root: ElementHandle;
     constructor(options: WaitTaskOptions);
     terminate(error: Error): void;
     rerun(): Promise<void>;
-    _cleanup(): void;
 }
 //# sourceMappingURL=DOMWorld.d.ts.map
