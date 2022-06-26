@@ -16,15 +16,29 @@ import platform
 # In the external repository, integrated build, this is the src/chromium directory.
 def root_path():
     SCRIPTS_PATH = path.dirname(path.abspath(__file__))
+    return path.dirname(SCRIPTS_PATH) # always right?
+    # why so complex?
     ABS_DEVTOOLS_PATH = path.dirname(SCRIPTS_PATH)
     PARENT_PATH = path.dirname(ABS_DEVTOOLS_PATH)
+    print(f"SCRIPTS_PATH = {SCRIPTS_PATH}")
+    print(f"ABS_DEVTOOLS_PATH = {ABS_DEVTOOLS_PATH}")
+    print(f"PARENT_PATH = {PARENT_PATH}")
     # TODO(1011259): remove Chromium repository handling
     if path.basename(PARENT_PATH) == 'renderer':
         # Chromium repository
         return path.dirname(path.dirname(path.dirname(PARENT_PATH)))
-    elif path.basename(PARENT_PATH) == 'devtools-frontend' or path.basename(
-            PARENT_PATH) == 'devtools-frontend-internal':
+    elif (
+        path.basename(PARENT_PATH) == 'devtools-frontend' or
+        path.basename(PARENT_PATH) == 'devtools-frontend-internal'
+    ):
         # External repository, integrated build
+        # FIXME avoid false positives. location of .git/?
+        # SCRIPTS_PATH = /home/user/src/devtools-frontend/devtools-frontend/scripts
+        # ABS_DEVTOOLS_PATH = /home/user/src/devtools-frontend/devtools-frontend
+        # PARENT_PATH = /home/user/src/devtools-frontend
+        # -> root_path:
+        # actual:   /home/user
+        # expected: /home/user/src/devtools-frontend/devtools-frontend
         return path.dirname(path.dirname(PARENT_PATH))
     else:
         # External repository, standalone build
