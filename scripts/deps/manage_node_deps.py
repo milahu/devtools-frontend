@@ -16,6 +16,7 @@ import subprocess
 import sys
 from collections import OrderedDict
 import shlex
+import re
 
 scripts_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(scripts_path)
@@ -35,6 +36,7 @@ LICENSES = [
     "MPL-2.0",
     "Python-2.0",
     "W3C",
+    "ODC-By-1.0", # language-subtag-registry@0.3.21
 ]
 
 DEPS = None # global. will be set in run_npm_command
@@ -106,8 +108,13 @@ def strip_private_fields():
                 json.dump(updated_pkg_data, pkg_file, indent=2, separators=(',', ': '))
                 pkg_file.write('\n')
             except:
-                print('Unable to fix: %s, %s' % (pkg, sys.exc_info()))
-                return True
+                if re.search(r"/(test|tests|__test__|__tests__)/", pkg):
+                    print('Ignoring broken json file: %s, %s' % (pkg, sys.exc_info()))
+                    # example:
+                    # devtools-frontend/node_modules/resolve/test/resolver/malformed_package_json/package.json
+                else:
+                    print('Unable to fix: %s, %s' % (pkg, sys.exc_info()))
+                    return True
 
     return False
 
