@@ -345,13 +345,19 @@ def run_npm_command(npm_command_args=None):
     return ensure_licenses()
 
 
-npm_args = None
+def main(argv):
 
-if (len(sys.argv[1:]) > 0):
-    npm_args = sys.argv[1:]
+    npm_args = None
 
-npm_errors_found = run_npm_command(npm_args)
+    if (len(argv[1:]) > 0):
+        npm_args = argv[1:]
 
-if npm_errors_found:
-    print('npm command failed')
-    exit(1)
+    npm_errors_found = run_npm_command(npm_args)
+
+    if npm_errors_found:
+        print('npm command failed')
+        exit(1)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
