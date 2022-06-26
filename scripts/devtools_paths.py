@@ -58,7 +58,11 @@ def node_path():
         import node
     finally:
         sys.path = old_sys_path
-    return node.GetBinaryPath()
+    node_exe = node.GetBinaryPath()
+    if path.exists(node_exe):
+        return node_exe
+    print(f"warning: no such file {node_exe} -> using system node")
+    return 'node'
 
 
 def devtools_root_path():
